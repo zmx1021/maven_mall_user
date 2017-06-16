@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jaxws="http://cxf.apache.org/jaxws"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context
+	    http://www.springframework.org/schema/context/spring-context-3.0.xsd
+	    http://cxf.apache.org/jaxws  
+	    http://cxf.apache.org/schemas/jaxws.xsd        ">
+
+	<context:property-placeholder location="classpath:dbConfig.properties" />
+	<!-- user 数据源 -->
+	<bean id="dataSourceUser" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${driverClassName}" />
+		<property name="url" value="${url.user}" />
+		<property name="username" value="${jdbc.username.user}" />
+		<property name="password" value="${jdbc.password.user}" />
+	</bean>
+	<!-- core数据源 -->
+	<bean id="dataSourceSale" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${driverClassName}" />
+		<property name="url" value="${url.core}" />
+		<property name="username" value="${jdbc.username.core}" />
+		<property name="password" value="${jdbc.password.core}" />
+	</bean>
+
+	<bean id="swithcdatasource" class="com.atguigu.p2c.usermanage.util.MyAbstractroutingdatasource">
+		<property name="targetDataSources">
+			<map>
+				<entry key="user">
+					<ref bean="dataSourceUser" />
+				</entry>
+				<entry key="sale">
+					<ref bean="dataSourceSale" />
+				</entry>
+			</map>
+		</property>
+<!-- 		默认数据源 -->
+		<property name="defaultTargetDataSource" ref="dataSourceUser">
+		</property>
+	</bean>
+	<bean id="sqlSessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="swithcdatasource" />
+		<property name="configLocation" value="classpath:mybatis-config.xml" />
+	</bean>
+
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactoryBean" />
+		<property name="basePackage" value="com.atguigu.p2c.usermanage.mapper" />
+	</bean>
+	<bean id="callback" class="com.atguigu.p2c.usermanage.util.MyCallbackService">
+
+	</bean>
+	<bean id="ininterceptor" class="org.apache.cxf.ws.security.wss4j.WSS4JInInterceptor">
+		<constructor-arg>
+			<map>
+				<entry key="action" value="UsernameToken" />
+				<entry key="passwordType" value="PasswordText" />
+				<entry key="passwordCallbackRef">
+					<ref bean="callback" />
+				</entry>
+			</map>
+		</constructor-arg>
+	</bean>
+
+	<bean id="testServiceImp" class="com.atguigu.p2c.usermanage.service.TestServiceImp" />
+	<jaxws:endpoint address="/testServiceInf"
+		implementorClass="com.atguigu.p2c.usermanage.service.TestServiceInf">
+		<jaxws:inInterceptors>
+			<ref bean="ininterceptor" />
+		</jaxws:inInterceptors>
+		<jaxws:implementor ref="testServiceImp" />
+	</jaxws:endpoint>
+
+	<bean id="userServiceImpl" class="com.atguigu.p2c.usermanage.service.UserServiceImpl"/>
+	<jaxws:endpoint address="/userService"
+		implementorClass="com.atguigu.p2c.usermanage.service.UserService">
+		<jaxws:inInterceptors>
+			<ref bean="ininterceptor" />
+		</jaxws:inInterceptors>
+		<jaxws:implementor ref="userServiceImpl" />
+	</jaxws:endpoint>
+	
+	<bean id="addressServiceImpl" class="com.atguigu.p2c.usermanage.service.AddressServiceImpl"/>
+	<jaxws:endpoint address="/addressService"
+		implementorClass="com.atguigu.p2c.usermanage.service.AddressService">
+		<jaxws:inInterceptors>
+			<ref bean="ininterceptor" />
+		</jaxws:inInterceptors>
+		<jaxws:implementor ref="addressServiceImpl" />
+	</jaxws:endpoint>
+
+</beans>
